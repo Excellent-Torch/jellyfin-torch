@@ -1,0 +1,39 @@
+{
+  "server": {
+    "bind_address": "0.0.0.0",
+    "port": "8282",
+    "url_base": "/decypharr",
+    "app_url": "https://megabinge.org/decypharr",
+    "log_level": "info"
+  },
+  "authentication": {
+    "use_auth": false,
+    "username": "admin",
+    "password": "",
+    "api_token": ""
+  },
+  "debrids": [
+    {
+      "provider": "alldebrid",
+      "name": "AD Primary",
+      "api_key": "IkBWubd3erEHwTwZB9PF",
+      "download_uncached": false,
+      "rate_limit": "200/minute",
+      "workers": 20,
+      "minimum_free_slot": 0,
+      "limit": 0,
+      "torrents_refresh_interval": "5m",
+      "download_links_refresh_interval": "10m",
+      "auto_expire_links_after": "24h",
+      "proxy": "",
+      "unpack_rar": true
+    }
+  ],
+  "mount": {
+    "type": "none"
+  },
+  "repair": {
+    "enabled": false
+  },
+  "arrs": []
+}

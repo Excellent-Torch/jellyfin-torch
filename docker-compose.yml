@@ -1,72 +1,4 @@
 services:
-  zurg:
-    image: ghcr.io/debridmediamanager/zurg-testing:v0.9.3-final
-    container_name: zurg
-    restart: unless-stopped
-    mem_limit: 128m
-    env_file: .env
-    expose:
-      - "9999"
-    volumes:
-      - ./data/zurg:/app/data
-      - ./config/zurg/config.yml:/app/config.yml:ro
-    networks:
-      - media
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9999/dav/ >/dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  rclone:
-    image: rclone/rclone:latest
-    container_name: rclone
-    restart: unless-stopped
-    mem_limit: 512m
-    env_file: .env
-    cap_add:
-      - SYS_ADMIN
-    security_opt:
-      - apparmor:unconfined
-    devices:
-      - /dev/fuse:/dev/fuse:rwm
-    volumes:
-      - /mnt/zurg:/data:rshared
-      - ./config/rclone/rclone.conf:/config/rclone/rclone.conf:ro
-      - ./data/rclone-cache:/cache
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-    command: >
-      mount zurg: /data
-      --allow-other
-      --allow-non-empty
-      --dir-cache-time 10s
-      --vfs-cache-mode full
-      --vfs-cache-max-size 5G
-      --vfs-cache-max-age 4h
-      --vfs-read-chunk-size 32M
-      --vfs-read-chunk-size-limit 256M
-      --buffer-size 16M
-      --transfers 4
-      --checkers 8
-      --poll-interval 15s
-      --uid=${PUID}
-      --gid=${PGID}
-      --cache-dir=/cache
-    depends_on:
-      zurg:
-        condition: service_healthy
-    networks:
-      - media
-    healthcheck:
-      test: ["CMD-SHELL", "mountpoint -q /data || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-
   jellyfin:
     image: jellyfin/jellyfin:latest
     container_name: jellyfin
@@ -86,9 +18,6 @@ services:
       - JELLYFIN_PublishedServerUrl=${JELLYFIN_PUBLISHED_URL}
     networks:
       - media
-    depends_on:
-      rclone:
-        condition: service_healthy
 
   decypharr:
     image: cy01/blackhole:latest
@@ -101,7 +30,7 @@ services:
     volumes:
       - ./config/decypharr:/app
       - ./data/decypharr:/data
-      - /mnt/zurg:/mnt/zurg:ro
+      - /mnt/zurg:/mnt/zurg:rw
     devices:
       - /dev/fuse:/dev/fuse:rwm
     cap_add:
@@ -110,8 +39,6 @@ services:
       - apparmor:unconfined
     networks:
       - media
-    depends_on:
-      - rclone
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:8282/ || exit 1"]
       interval: 20s
@@ -136,8 +63,6 @@ services:
       - /mnt/zurg:/data:ro
     networks:
       - media
-    depends_on:
-      - rclone
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:8989/sonarr/ || exit 1"]
       interval: 20s
@@ -162,8 +87,6 @@ services:
       - /mnt/zurg:/data:ro
     networks:
       - media
-    depends_on:
-      - rclone
     healthcheck:
       test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:7878/radarr/ || exit 1"]
       interval: 20s

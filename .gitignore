@@ -1,0 +1,96 @@
+# === OS Files ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# === IDE / Editor ===
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.iml
+.project
+.classpath
+.settings/
+*.code-workspace
+
+# === Jellyfin Server ===
+# Config (contains secrets, DB paths, etc.)
+/config/config.json
+/config/network.xml
+/config/encoding.xml
+/config/system.xml
+
+# Data directories (auto-populated)
+/data/subtitles/
+/data/metadata/
+/data/collections/
+/data/playlists/
+
+# Media library paths (never commit actual media)
+/media/
+/library/
+
+# Logs
+/logs/
+*.log
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+library.db
+userdata.db
+
+# Cache
+/cache/
+transcodes/
+*.cache
+
+# === Docker ===
+docker-compose.override.yml
+.env.local
+.env.production
+
+# === Build (if building from source) ===
+bin/
+obj/
+*.user
+*.suo
+*.cache
+packages/
+artifacts/
+[Jj]ellyfin.Server/bin/
+[Jj]ellyfin.Server/obj/
+[Jj]ellyfin.Api/bin/
+[Jj]ellyfin.Api/obj/
+**/bin/**
+**/obj/**
+**/node_modules/
+
+# === SSL / Secrets ===
+*.pfx
+*.p12
+*.cert
+*.key
+*.pem
+secrets/
+credentials/
+
+# === Ansible / Deployment (if used) ===
+/inventory/
+*.retry
+
+# === Misc ===
+*.bak
+*.old
+*.orig
+dist/
+build/
+out/
+
+# Keep gitkeep files
+!**/.gitkeep

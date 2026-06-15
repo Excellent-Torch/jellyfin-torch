@@ -52,6 +52,7 @@ transcodes/
 
 # === Docker ===
 docker-compose.override.yml
+.env
 .env.local
 .env.production
 

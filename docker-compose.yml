@@ -1,0 +1,225 @@
+services:
+  zurg:
+    image: ghcr.io/debridmediamanager/zurg-testing:v0.9.3-final
+    container_name: zurg
+    restart: unless-stopped
+    mem_limit: 128m
+    env_file: .env
+    expose:
+      - "9999"
+    volumes:
+      - ./data/zurg:/app/data
+      - ./config/zurg/config.yml:/app/config.yml:ro
+    networks:
+      - media
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9999/dav/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  rclone:
+    image: rclone/rclone:latest
+    container_name: rclone
+    restart: unless-stopped
+    mem_limit: 512m
+    env_file: .env
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    devices:
+      - /dev/fuse:/dev/fuse:rwm
+    volumes:
+      - /mnt/zurg:/data:rshared
+      - ./config/rclone/rclone.conf:/config/rclone/rclone.conf:ro
+      - ./data/rclone-cache:/cache
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    command: >
+      mount zurg: /data
+      --allow-other
+      --allow-non-empty
+      --dir-cache-time 10s
+      --vfs-cache-mode full
+      --vfs-cache-max-size 5G
+      --vfs-cache-max-age 4h
+      --vfs-read-chunk-size 32M
+      --vfs-read-chunk-size-limit 256M
+      --buffer-size 16M
+      --transfers 4
+      --checkers 8
+      --poll-interval 15s
+      --uid=${PUID}
+      --gid=${PGID}
+      --cache-dir=/cache
+    depends_on:
+      zurg:
+        condition: service_healthy
+    networks:
+      - media
+    healthcheck:
+      test: ["CMD-SHELL", "mountpoint -q /data || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    mem_limit: 1536m
+    env_file: .env
+    user: "${PUID}:${PGID}"
+    group_add:
+      - "44"   # video
+    ports:
+      - "127.0.0.1:8096:8096"
+    volumes:
+      - ./data/jellyfin/config:/config
+      - ./data/jellyfin/cache:/cache
+      - /mnt/zurg:/media:ro
+    environment:
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_PUBLISHED_URL}
+    networks:
+      - media
+    depends_on:
+      rclone:
+        condition: service_healthy
+
+  decypharr:
+    image: cy01/blackhole:latest
+    container_name: decypharr
+    restart: unless-stopped
+    mem_limit: 384m
+    env_file: .env
+    ports:
+      - "127.0.0.1:8282:8282"
+    volumes:
+      - ./config/decypharr:/app
+      - ./data/decypharr:/data
+      - /mnt/zurg:/mnt/zurg:ro
+    devices:
+      - /dev/fuse:/dev/fuse:rwm
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    networks:
+      - media
+    depends_on:
+      - rclone
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:8282/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    mem_limit: 384m
+    env_file: .env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports:
+      - "127.0.0.1:8989:8989"
+    volumes:
+      - ./config/sonarr:/config
+      - /mnt/zurg:/data:ro
+    networks:
+      - media
+    depends_on:
+      - rclone
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:8989/sonarr/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    mem_limit: 384m
+    env_file: .env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports:
+      - "127.0.0.1:7878:7878"
+    volumes:
+      - ./config/radarr:/config
+      - /mnt/zurg:/data:ro
+    networks:
+      - media
+    depends_on:
+      - rclone
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:7878/radarr/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    mem_limit: 256m
+    env_file: .env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports:
+      - "127.0.0.1:9696:9696"
+    volumes:
+      - ./config/prowlarr:/config
+    networks:
+      - media
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:9696/prowlarr/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    restart: unless-stopped
+    mem_limit: 384m
+    env_file: .env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports:
+      - "127.0.0.1:5055:5055"
+    volumes:
+      - ./config/overseerr:/config
+    networks:
+      - media
+    depends_on:
+      - sonarr
+      - radarr
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:5055/overseerr/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+networks:
+  media:
+    driver: bridge
